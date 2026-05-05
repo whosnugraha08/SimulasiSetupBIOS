@@ -4,6 +4,7 @@
 import { state, formatTime } from './state.js';
 import { SCORING } from './data.js';
 import { validatePartitions } from './partisi.js';
+import { saveScore, loadLeaderboard as loadLBFromSupabase } from './supabase.js';
 
 // ============================================
 // SCORING
@@ -93,7 +94,6 @@ export function calculateScore() {
 export function renderResults(onRestart, onLeaderboard) {
   const score = calculateScore();
   const container = document.getElementById('hasil-container');
-  const remaining = state.timeLimit - state.elapsedSeconds;
   const timeUsed = state.elapsedSeconds;
   const titleClass = score.totalScore >= 70 ? '' : 'fail';
   const titleIcon = score.totalScore >= 70 ? '✅' : '❌';
@@ -104,6 +104,7 @@ export function renderResults(onRestart, onLeaderboard) {
       <div><span class="label">Nama       : </span><span class="value">${state.nama}</span></div>
       <div><span class="label">⏱ Waktu   : </span><span class="value">${Math.floor(timeUsed / 60)} menit ${timeUsed % 60} detik</span></div>
       <div><span class="label">📊 Skor    : </span><span class="value score" style="color:${score.totalScore >= 70 ? '#0f0' : '#ff4444'}">${score.totalScore} / 100</span></div>
+      <div id="save-status" style="color:#888;font-size:.85em;margin-top:4px"></div>
     </div>
     <div class="hasil-detail">
       <h3>DETAIL PENGERJAAN:</h3>
@@ -158,31 +159,46 @@ export function renderResults(onRestart, onLeaderboard) {
 
   container.innerHTML = html;
 
-  // Save to leaderboard
-  saveToLeaderboard(score);
+  // Save to LocalStorage
+  saveToLocalLeaderboard(score);
 
-  // Bind buttons
+  // Save to Supabase (async, non-blocking)
+  const statusEl = document.getElementById('save-status');
+  statusEl.textContent = '☁️ Menyimpan ke server...';
+  saveScore({
+    nama: state.nama,
+    skor: score.totalScore,
+    mode: score.perfect ? 'perfect' : 'practice',
+    waktuSelesai: state.elapsedSeconds,
+    detail: {
+      soalId: state.soalPartisi?.id,
+      soalTeks: state.soalPartisi?.teks,
+      items: score.details.map(d => ({ id: d.id, correct: d.correct, points: d.points })),
+    },
+  }).then(result => {
+    if (result) statusEl.textContent = '☁️ Tersimpan di server ✓';
+    else statusEl.textContent = '⚠️ Gagal simpan ke server (tersimpan lokal)';
+  });
+
   document.getElementById('btn-restart').addEventListener('click', onRestart);
   document.getElementById('btn-show-lb').addEventListener('click', onLeaderboard);
 }
 
 // ============================================
-// LEADERBOARD
+// LOCAL LEADERBOARD (FALLBACK)
 // ============================================
 const LB_KEY_PERFECT = 'biosSimLeaderboardPerfect';
 const LB_KEY_PRACTICE = 'biosSimLeaderboardPractice';
 
-function loadLeaderboard(key) {
-  try {
-    return JSON.parse(localStorage.getItem(key)) || [];
-  } catch { return []; }
+function loadLocalLB(key) {
+  try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
 }
 
-function saveLeaderboard(key, data) {
+function saveLocalLB(key, data) {
   localStorage.setItem(key, JSON.stringify(data));
 }
 
-function saveToLeaderboard(score) {
+function saveToLocalLeaderboard(score) {
   const entry = {
     nama: state.nama,
     waktuDetik: state.elapsedSeconds,
@@ -194,45 +210,66 @@ function saveToLeaderboard(score) {
   };
 
   if (score.perfect) {
-    const lb = loadLeaderboard(LB_KEY_PERFECT);
+    const lb = loadLocalLB(LB_KEY_PERFECT);
     lb.push(entry);
     lb.sort((a, b) => a.waktuDetik - b.waktuDetik);
-    saveLeaderboard(LB_KEY_PERFECT, lb.slice(0, 10));
+    saveLocalLB(LB_KEY_PERFECT, lb.slice(0, 20));
   }
-
-  // Always save to practice
-  const lbP = loadLeaderboard(LB_KEY_PRACTICE);
+  const lbP = loadLocalLB(LB_KEY_PRACTICE);
   lbP.push(entry);
   lbP.sort((a, b) => b.skor - a.skor || a.waktuDetik - b.waktuDetik);
-  saveLeaderboard(LB_KEY_PRACTICE, lbP.slice(0, 10));
+  saveLocalLB(LB_KEY_PRACTICE, lbP.slice(0, 20));
 }
 
-export function renderLeaderboard(onBack) {
+// ============================================
+// LEADERBOARD RENDERING
+// ============================================
+export async function renderLeaderboard(onBack) {
   const container = document.getElementById('leaderboard-container');
-  const perfectLB = loadLeaderboard(LB_KEY_PERFECT);
-  const practiceLB = loadLeaderboard(LB_KEY_PRACTICE);
+
+  // Show loading
+  container.innerHTML = '<div class="lb-title">🏆 LEADERBOARD</div><div class="lb-empty">Memuat data...</div>';
+
+  // Try Supabase first, fall back to local
+  let supabaseData = null;
+  try {
+    supabaseData = await loadLBFromSupabase('all');
+  } catch { /* ignore */ }
+
+  const useCloud = supabaseData && supabaseData.length > 0;
+  const localPerfect = loadLocalLB(LB_KEY_PERFECT);
+  const localPractice = loadLocalLB(LB_KEY_PRACTICE);
+
+  // Merge or use cloud data
+  let perfectEntries, practiceEntries;
+  if (useCloud) {
+    perfectEntries = supabaseData.filter(e => e.mode === 'perfect').map(mapCloudEntry);
+    practiceEntries = supabaseData.map(mapCloudEntry);
+  } else {
+    perfectEntries = localPerfect;
+    practiceEntries = localPractice;
+  }
 
   let html = `
-    <div class="lb-title">🏆 LEADERBOARD</div>
+    <div class="lb-title">🏆 LEADERBOARD ${useCloud ? '<span style="color:#0f0;font-size:.7em">☁️ Online</span>' : '<span style="color:#888;font-size:.7em">💾 Lokal</span>'}</div>
     <div class="lb-tabs">
       <button class="lb-tab-btn active" data-tab="perfect">Tercepat Sempurna (Skor 100)</button>
-      <button class="lb-tab-btn" data-tab="practice">Skor Latihan</button>
+      <button class="lb-tab-btn" data-tab="practice">Semua Skor</button>
     </div>
     <div id="lb-content-perfect">
-      ${renderLBTable(perfectLB, true)}
+      ${renderLBTable(perfectEntries, true)}
     </div>
     <div id="lb-content-practice" style="display:none">
-      ${renderLBTable(practiceLB, false)}
+      ${renderLBTable(practiceEntries, false)}
     </div>
     <div class="lb-buttons">
       <button class="lb-btn" id="btn-lb-back">Kembali</button>
-      <button class="lb-btn" id="btn-lb-reset">Reset Leaderboard</button>
+      <button class="lb-btn" id="btn-lb-reset">Reset Lokal</button>
     </div>
   `;
 
   container.innerHTML = html;
 
-  // Tab switching
   container.querySelectorAll('.lb-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       container.querySelectorAll('.lb-tab-btn').forEach(b => b.classList.remove('active'));
@@ -245,7 +282,7 @@ export function renderLeaderboard(onBack) {
 
   document.getElementById('btn-lb-back').addEventListener('click', onBack);
   document.getElementById('btn-lb-reset').addEventListener('click', () => {
-    if (confirm('Reset semua data leaderboard?')) {
+    if (confirm('Reset data leaderboard lokal?')) {
       localStorage.removeItem(LB_KEY_PERFECT);
       localStorage.removeItem(LB_KEY_PRACTICE);
       renderLeaderboard(onBack);
@@ -253,8 +290,20 @@ export function renderLeaderboard(onBack) {
   });
 }
 
+function mapCloudEntry(e) {
+  return {
+    nama: e.nama,
+    skor: e.skor,
+    waktuDetik: e.waktu_selesai,
+    waktu: formatTime(e.waktu_selesai || 0),
+    soalTeks: e.detail?.soalTeks || e.detail?.soalId || '?',
+    soalId: e.detail?.soalId || '?',
+    tanggal: e.created_at ? new Date(e.created_at).toLocaleDateString('id-ID') : '?',
+  };
+}
+
 function renderLBTable(entries, showWaktu) {
-  if (entries.length === 0) {
+  if (!entries || entries.length === 0) {
     return '<div class="lb-empty">Belum ada entri leaderboard.</div>';
   }
 

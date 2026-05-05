@@ -180,13 +180,29 @@ function getHardDiskDrivesItems() {
 }
 
 function getBootDevicePriorityItems() {
+  // Boot Device Priority depends on Hard Disk Drives order
+  // Sandisk only appears here if it's set as 1st in Hard Disk Drives
+  const hdd1st = state.bios2.hddDrive1st;
+  const hdd2nd = state.bios2.hddDrive2nd;
+
+  // Build available options based on HDD priority order
+  const options = [hdd1st, hdd2nd, 'Disabled'].filter((v, i, a) => a.indexOf(v) === i);
+
+  // If boot device values are no longer valid (e.g. HDD order changed), reset them
+  if (!options.includes(state.bios2.bootDevice1st)) {
+    state.bios2.bootDevice1st = hdd1st;
+  }
+  if (!options.includes(state.bios2.bootDevice2nd) && state.bios2.bootDevice2nd !== 'Disabled') {
+    state.bios2.bootDevice2nd = hdd2nd;
+  }
+
   return [
     { id: 'bootDevice1st', label: '1st Boot Device', value: `[${state.bios2.bootDevice1st}]`, type: 'select',
-      options: ['Sandisk', 'HDD:MidasForce SSD 256', 'Disabled'],
+      options: options,
       currentValue: state.bios2.bootDevice1st, stateKey: 'bootDevice1st', stateGroup: 'bios2',
       help: 'Specifies the boot\nsequence from the\navailable devices.\n\nA device enclosed in\nparentheses has been\ndisabled in the\ncorresponding type\nmenu.' },
     { id: 'bootDevice2nd', label: '2nd Boot Device', value: `[${state.bios2.bootDevice2nd}]`, type: 'select',
-      options: ['Sandisk', 'HDD:MidasForce SSD 256', 'Disabled'],
+      options: options,
       currentValue: state.bios2.bootDevice2nd, stateKey: 'bootDevice2nd', stateGroup: 'bios2',
       help: 'Specifies the boot\nsequence from the\navailable devices.' },
   ];
