@@ -74,6 +74,7 @@ export function renderPartisi() {
   renderPartitionTable();
   renderPartitionButtons();
   renderSizeDialog();
+  renderConfirmDialog();
 }
 
 function renderSoalBox() {
@@ -169,7 +170,6 @@ function renderSizeDialog() {
   const input = document.getElementById('input-size');
   input.max = Math.floor(remaining * 10) / 10;
 
-  // Pre-fill with remaining space (the full unallocated amount)
   if (partisiNav.sizeDialogJustOpened) {
     input.value = Math.floor(remaining * 10) / 10;
     partisiNav.sizeDialogJustOpened = false;
@@ -178,12 +178,33 @@ function renderSizeDialog() {
   input.select();
 }
 
+function renderConfirmDialog() {
+  const dialog = document.getElementById('confirm-dialog');
+  if (!partisiNav.confirmDialogOpen) {
+    dialog.classList.add('hidden');
+    return;
+  }
+  dialog.classList.remove('hidden');
+  const noBtn = document.getElementById('btn-confirm-no');
+  const yesBtn = document.getElementById('btn-confirm-yes');
+  noBtn.className = `partisi-btn confirm-no ${partisiNav.confirmDialogBtn === 0 ? 'focused' : ''}`;
+  yesBtn.className = `partisi-btn confirm-yes ${partisiNav.confirmDialogBtn === 1 ? 'focused' : ''}`;
+}
+
 // ============================================
 // KEYBOARD HANDLING
 // ============================================
 export function handlePartisiKey(e, onNext) {
   const key = e.key;
 
+  // Confirm dialog open
+  if (partisiNav.confirmDialogOpen) {
+    handleConfirmDialogKey(e, onNext);
+    renderPartisi();
+    return;
+  }
+
+  // Size dialog open
   if (partisiNav.sizeDialogOpen) {
     handleSizeDialogKey(e);
     return;
@@ -276,7 +297,30 @@ function handlePartisiAction(onNext) {
         break;
     }
   } else if (partisiNav.focusArea === 'next') {
-    if (onNext) onNext();
+    // Show confirm dialog instead of immediately submitting
+    partisiNav.confirmDialogOpen = true;
+    partisiNav.confirmDialogBtn = 0; // Default to "Tidak, Kembali"
+  }
+}
+
+function handleConfirmDialogKey(e, onNext) {
+  const key = e.key;
+  switch (key) {
+    case 'ArrowLeft':
+    case 'ArrowRight':
+    case 'Tab':
+      e.preventDefault();
+      partisiNav.confirmDialogBtn = partisiNav.confirmDialogBtn === 0 ? 1 : 0;
+      break;
+    case 'Enter':
+      e.preventDefault();
+      partisiNav.confirmDialogOpen = false;
+      if (partisiNav.confirmDialogBtn === 1 && onNext) onNext();
+      break;
+    case 'Escape':
+      e.preventDefault();
+      partisiNav.confirmDialogOpen = false;
+      break;
   }
 }
 

@@ -46,11 +46,13 @@ export const biosNav = {
 
 export const partisiNav = {
   selectedRow: 0,
-  focusArea: 'table', // 'table' | 'buttons'
+  focusArea: 'table', // 'table' | 'buttons' | 'next'
   focusedBtn: 0,
   sizeDialogOpen: false,
   sizeDialogJustOpened: false,
-  totalButtons: 5, // Refresh, Delete, Format, New, Load Driver
+  confirmDialogOpen: false,
+  confirmDialogBtn: 0, // 0=No, 1=Yes
+  totalButtons: 5,
 };
 
 export function resetState() {
@@ -93,6 +95,8 @@ export function resetState() {
   partisiNav.focusedBtn = 0;
   partisiNav.sizeDialogOpen = false;
   partisiNav.sizeDialogJustOpened = false;
+  partisiNav.confirmDialogOpen = false;
+  partisiNav.confirmDialogBtn = 0;
 }
 
 export function formatTime(totalSeconds) {

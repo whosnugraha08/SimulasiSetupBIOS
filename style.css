@@ -148,6 +148,17 @@ body {
 .size-dialog-box input:focus{outline:2px solid #0078d7}
 .size-dialog-buttons{display:flex;gap:10px;justify-content:center}
 
+/* Confirm submit dialog */
+#confirm-dialog{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;z-index:800;background:rgba(0,0,0,.6)}
+.confirm-dialog-box{background:#2d2d44;border:2px solid #e6b800;padding:25px 35px;text-align:center;color:#fff;font-family:'Segoe UI',sans-serif;max-width:450px;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.confirm-title{color:#e6b800;font-size:1.2em;font-weight:bold;margin-bottom:12px}
+.confirm-text{color:#ccc;font-size:.9em;line-height:1.6;margin-bottom:20px}
+.confirm-buttons{display:flex;gap:12px;justify-content:center}
+.confirm-no{background:#3a3a55!important;border-color:#888!important;color:#fff!important}
+.confirm-no:hover,.confirm-no.focused{background:#555!important;border-color:#aaa!important}
+.confirm-yes{background:#c0392b!important;border-color:#e74c3c!important;color:#fff!important}
+.confirm-yes:hover,.confirm-yes.focused{background:#e74c3c!important;border-color:#ff6b6b!important}
+
 /* ============================================ RESULTS ============================================ */
 #screen-hasil{background:#000;overflow-y:auto}
 #hasil-container{border:2px solid #555;max-width:650px;width:90%;padding:30px;margin:20px auto;background:rgba(0,10,20,.8)}
