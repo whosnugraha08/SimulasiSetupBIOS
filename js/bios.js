@@ -23,9 +23,17 @@ function getTabItems(tabIndex) {
 }
 
 function getMainItems() {
+  // Build current time display
+  const now = new Date();
+  const timeStr = state.bios1.systemTime || `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const dateStr = state.bios1.systemDate || `${days[now.getDay()]} ${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}/${now.getFullYear()}`;
+
   const items = [
-    { id: 'systemTime', label: 'System Time', value: '[10:41:54]', type: 'display', help: HELP_TEXTS.systemTime },
-    { id: 'systemDate', label: 'System Date', value: '[Sun 10/06/2024]', type: 'display', help: HELP_TEXTS.systemDate },
+    { id: 'systemTime', label: 'System Time', value: `[${timeStr}]`, type: 'display',
+      help: HELP_TEXTS.systemTime },
+    { id: 'systemDate', label: 'System Date', value: `[${dateStr}]`, type: 'display',
+      help: HELP_TEXTS.systemDate },
     { id: 'legacyDiskette', label: 'Legacy Diskette A', value: `[${state.bios1.legacyDiskette}]`, type: 'select',
       options: ['Disabled', '360K, 5.25 in.', '1.2M, 5.25 in.', '720K, 3.5 in.', '1.44M, 3.5 in.', '2.88M, 3.5 in.'],
       currentValue: state.bios1.legacyDiskette, stateKey: 'legacyDiskette', stateGroup: 'bios1',
@@ -181,19 +189,23 @@ function getHardDiskDrivesItems() {
 
 function getBootDevicePriorityItems() {
   // Boot Device Priority depends on Hard Disk Drives order
-  // Sandisk only appears here if it's set as 1st in Hard Disk Drives
+  // Sandisk only appears as a boot option when it's set as 1st in Hard Disk Drives
   const hdd1st = state.bios2.hddDrive1st;
-  const hdd2nd = state.bios2.hddDrive2nd;
 
-  // Build available options based on HDD priority order
-  const options = [hdd1st, hdd2nd, 'Disabled'].filter((v, i, a) => a.indexOf(v) === i);
-
-  // If boot device values are no longer valid (e.g. HDD order changed), reset them
-  if (!options.includes(state.bios2.bootDevice1st)) {
-    state.bios2.bootDevice1st = hdd1st;
-  }
-  if (!options.includes(state.bios2.bootDevice2nd) && state.bios2.bootDevice2nd !== 'Disabled') {
-    state.bios2.bootDevice2nd = hdd2nd;
+  let options;
+  if (hdd1st === 'Sandisk') {
+    // User has set Sandisk as 1st HDD — now it appears in boot options
+    options = ['Sandisk', 'HDD:MidasForce SSD 256', 'Disabled'];
+  } else {
+    // Sandisk not set as 1st — only HDD and Disabled available
+    options = ['HDD:MidasForce SSD 256', 'Disabled'];
+    // Reset boot device if it was Sandisk but HDD order changed back
+    if (state.bios2.bootDevice1st === 'Sandisk') {
+      state.bios2.bootDevice1st = 'HDD:MidasForce SSD 256';
+    }
+    if (state.bios2.bootDevice2nd === 'Sandisk') {
+      state.bios2.bootDevice2nd = 'Disabled';
+    }
   }
 
   return [
@@ -342,7 +354,37 @@ function handleEscape() {
 
 function handleValueChange(items, dir) {
   const item = items[biosNav.currentItem];
-  if (!item || item.type !== 'select' || !item.options) return;
+  if (!item) return;
+
+  // Handle System Time (+/- changes hour)
+  if (item.id === 'systemTime') {
+    const now = new Date();
+    let timeStr = state.bios1.systemTime || `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    const parts = timeStr.split(':').map(Number);
+    parts[0] = (parts[0] + dir + 24) % 24; // cycle hours 0-23
+    state.bios1.systemTime = parts.map(p => String(p).padStart(2, '0')).join(':');
+    return;
+  }
+
+  // Handle System Date (+/- changes day)
+  if (item.id === 'systemDate') {
+    const now = new Date();
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    let dateStr = state.bios1.systemDate || `${days[now.getDay()]} ${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}/${now.getFullYear()}`;
+    const match = dateStr.match(/(\w+)\s+(\d+)\/(\d+)\/(\d+)/);
+    if (match) {
+      let m = parseInt(match[2]), d = parseInt(match[3]), y = parseInt(match[4]);
+      d += dir;
+      const maxD = new Date(y, m, 0).getDate();
+      if (d > maxD) { d = 1; m++; if (m > 12) { m = 1; y++; } }
+      if (d < 1) { m--; if (m < 1) { m = 12; y--; } d = new Date(y, m, 0).getDate(); }
+      const dayName = days[new Date(y, m - 1, d).getDay()];
+      state.bios1.systemDate = `${dayName} ${String(m).padStart(2,'0')}/${String(d).padStart(2,'0')}/${y}`;
+    }
+    return;
+  }
+
+  if (item.type !== 'select' || !item.options) return;
   let idx = item.options.indexOf(item.currentValue) + dir;
   if (idx < 0) idx = item.options.length - 1;
   if (idx >= item.options.length) idx = 0;

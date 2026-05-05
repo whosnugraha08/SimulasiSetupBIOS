@@ -12,6 +12,8 @@ export const state = {
   session: 1, // 1 or 2
 
   bios1: {
+    systemTime: null, // null = use current time
+    systemDate: null, // null = use current date
     legacyDiskette: '1.44M, 3.5 in.',
     ataIdeConfig: 'Disabled',
     usb2Controller: 'Disabled',
@@ -63,6 +65,8 @@ export function resetState() {
   state.elapsedSeconds = 0;
   state.session = 1;
   state.bios1 = {
+    systemTime: null,
+    systemDate: null,
     legacyDiskette: '1.44M, 3.5 in.',
     ataIdeConfig: 'Disabled',
     usb2Controller: 'Disabled',
