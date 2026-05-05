@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Simulasi Ujian Praktikum Installasi Windows 10 via USB — AMIBIOS Setup. Latihan konfigurasi BIOS dan partisi HDD.">
+  <title>Simulasi Setup BIOS — Ujian Praktikum</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💻</text></svg>">
+</head>
+<body>
+  <!-- CRT Scanline Overlay -->
+  <div id="crt-overlay"></div>
+
+  <!-- Timer -->
+  <div id="timer-display">20:00</div>
+
+  <!-- ============================================ -->
+  <!-- START SCREEN -->
+  <!-- ============================================ -->
+  <div id="screen-start" class="screen active">
+    <div class="start-box">
+      <h1>SIMULASI UJIAN PRAKTIKUM</h1>
+      <div class="subtitle">Installasi Windows 10 via USB — AMIBIOS</div>
+      <div class="input-group">
+        <label for="input-nama">Masukkan nama kamu:</label>
+        <input type="text" id="input-nama" maxlength="30" autocomplete="off" spellcheck="false">
+        <div class="error-msg" id="error-nama"></div>
+      </div>
+      <div class="start-buttons">
+        <button id="btn-mulai">[ MULAI SIMULASI ]</button>
+        <button id="btn-panduan">[ LIHAT PANDUAN ]</button>
+        <button id="btn-leaderboard">[ LEADERBOARD ]</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- POST SCREEN (shared for POST1 & POST2) -->
+  <!-- ============================================ -->
+  <div id="screen-post" class="screen">
+    <pre id="post-content"></pre>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- BIOS SCREEN -->
+  <!-- ============================================ -->
+  <div id="screen-bios" class="screen">
+    <div id="bios-container">
+      <div id="bios-header">
+        <div id="bios-tabs"></div>
+        <div class="bios-title">BIOS SETUP UTILITY</div>
+      </div>
+      <div id="bios-body">
+        <div id="bios-menu"></div>
+        <div id="bios-sidebar"></div>
+      </div>
+      <div id="bios-footer">
+        v02.58 (C)Copyright 1985-2007, American Megatrends, Inc.
+      </div>
+    </div>
+
+    <!-- Value Selection Popup -->
+    <div id="value-popup" class="hidden">
+      <div id="value-popup-content"></div>
+    </div>
+
+    <!-- Save & Exit Dialog -->
+    <div id="save-dialog" class="hidden">
+      <div class="dialog-box">
+        <p>Save configuration and reset?</p>
+        <div class="dialog-buttons">
+          <button id="btn-save-ok" class="dialog-btn active">Ok</button>
+          <button id="btn-save-cancel" class="dialog-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- BOOT SCREEN -->
+  <!-- ============================================ -->
+  <div id="screen-boot" class="screen">
+    <pre id="boot-content"></pre>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- WINDOWS SETUP SCREENS -->
+  <!-- ============================================ -->
+  <div id="screen-winsetup" class="screen">
+    <div id="winsetup-content"></div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- PARTITION SCREEN -->
+  <!-- ============================================ -->
+  <div id="screen-partisi" class="screen">
+    <div id="soal-box"></div>
+    <div id="partisi-container">
+      <div id="partisi-header">Windows Setup</div>
+      <div id="partisi-subtitle">Where do you want to install Windows?</div>
+      <div id="partisi-table"></div>
+      <div id="partisi-buttons"></div>
+      <div id="partisi-next-row">
+        <button id="btn-next" class="partisi-btn">Next</button>
+      </div>
+      <div class="nav-hint">Tab/Shift+Tab pindah fokus | ↑↓ pilih partisi | Enter/Spasi klik tombol</div>
+    </div>
+
+    <!-- Size Input Dialog -->
+    <div id="size-dialog" class="hidden">
+      <div class="size-dialog-box">
+        <label for="input-size">Size (GB):</label>
+        <input type="number" id="input-size" min="1" max="255" step="0.1">
+        <div class="size-dialog-buttons">
+          <button class="partisi-btn" id="btn-size-apply">Apply</button>
+          <button class="partisi-btn" id="btn-size-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- RESULTS SCREEN -->
+  <!-- ============================================ -->
+  <div id="screen-hasil" class="screen">
+    <div id="hasil-container"></div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- LEADERBOARD SCREEN -->
+  <!-- ============================================ -->
+  <div id="screen-leaderboard" class="screen">
+    <div id="leaderboard-container"></div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- PANDUAN SCREEN -->
+  <!-- ============================================ -->
+  <div id="screen-panduan" class="screen">
+    <div id="panduan-container"></div>
+  </div>
+
+  <!-- Main Script (ES Module) -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
