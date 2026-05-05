@@ -105,8 +105,8 @@ body {
 .winsetup-field{margin-bottom:16px}
 .winsetup-field label{display:block;color:#ccc;margin-bottom:6px;font-size:.95em}
 .winsetup-field select{background:#3a3a55;color:#fff;border:1px solid #555;padding:8px 12px;width:100%;font-size:1em;font-family:'Segoe UI',sans-serif}
-.winsetup-btn{background:#0078d7;color:#fff;border:none;padding:10px 30px;font-size:1em;cursor:pointer;font-family:'Segoe UI',sans-serif;margin-top:10px;transition:background .15s}
-.winsetup-btn:hover{background:#005a9e}
+.winsetup-btn{background:#0078d7;color:#fff;border:none;padding:10px 30px;font-size:1em;cursor:pointer;font-family:'Segoe UI',sans-serif;margin-top:10px;transition:background .15s;outline:none}
+.winsetup-btn:hover,.winsetup-btn:focus,.winsetup-btn.focused{background:#005a9e;box-shadow:0 0 0 2px #66afe9}
 .winsetup-btn-outline{background:transparent;border:1px solid #0078d7;color:#0078d7;padding:10px 30px;font-size:1em;cursor:pointer;font-family:'Segoe UI',sans-serif;margin-top:10px}
 .winsetup-btn-outline:hover{background:#0078d7;color:#fff}
 .winsetup-footer{padding:15px 40px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #444}

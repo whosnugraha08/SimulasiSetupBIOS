@@ -178,6 +178,9 @@ function getWinSetupContainer() {
   return document.getElementById('winsetup-content');
 }
 
+// Track which item is focused in Windows Setup screens
+let winFocus = 0;
+
 function renderWinLang() {
   getWinSetupContainer().innerHTML = `
     <div class="winsetup-container">
@@ -193,10 +196,11 @@ function renderWinLang() {
         </div>
       </div>
       <div class="winsetup-footer">
-        <button class="winsetup-btn" id="win-lang-next">Next</button>
+        <button class="winsetup-btn focused" id="win-lang-next">Next</button>
       </div>
     </div>`;
   document.getElementById('win-lang-next').addEventListener('click', () => setPhase('WIN_INSTALL'));
+  document.getElementById('win-lang-next').focus();
 }
 
 function renderWinInstallNow() {
@@ -207,16 +211,18 @@ function renderWinInstallNow() {
         <div class="winsetup-content" style="text-align:center">
           <span class="windows-logo">⊞</span>
           <div style="margin-bottom:30px">
-            <button class="winsetup-install-btn" id="win-install-btn">Install now</button>
+            <button class="winsetup-install-btn focused" id="win-install-btn">Install now</button>
           </div>
           <a href="#" style="color:#0078d7;font-size:.9em" onclick="return false">Repair your computer</a>
         </div>
       </div>
     </div>`;
   document.getElementById('win-install-btn').addEventListener('click', () => setPhase('WIN_LICENSE'));
+  document.getElementById('win-install-btn').focus();
 }
 
 function renderWinLicense() {
+  winFocus = 0; // 0=checkbox, 1=next button
   getWinSetupContainer().innerHTML = `
     <div class="winsetup-container">
       <div class="winsetup-header">Windows Setup</div>
@@ -244,9 +250,11 @@ function renderWinLicense() {
     document.getElementById('win-license-next').disabled = !e.target.checked;
   });
   document.getElementById('win-license-next').addEventListener('click', () => setPhase('WIN_TYPE'));
+  document.getElementById('license-accept').focus();
 }
 
 function renderWinType() {
+  winFocus = 1; // 0=upgrade, 1=custom (default to custom)
   getWinSetupContainer().innerHTML = `
     <div class="winsetup-container">
       <div class="winsetup-header">Windows Setup</div>
@@ -254,11 +262,11 @@ function renderWinType() {
         <div class="winsetup-content">
           <h2>Which type of installation do you want?</h2>
           <div class="winsetup-choice">
-            <div class="winsetup-choice-item" id="win-upgrade">
+            <div class="winsetup-choice-item" id="win-upgrade" tabindex="0">
               <h3>Upgrade: Install Windows and keep files, settings, and applications</h3>
               <p>The files, settings, and applications are moved to Windows with this option. This option is only available when a supported version of Windows is already running.</p>
             </div>
-            <div class="winsetup-choice-item" id="win-custom">
+            <div class="winsetup-choice-item selected" id="win-custom" tabindex="0">
               <h3>Custom: Install Windows only (advanced)</h3>
               <p>The files, settings, and applications aren't kept with this option. If you want to make changes to partitions and drives, start the computer using the installation disc.</p>
             </div>
@@ -268,10 +276,59 @@ function renderWinType() {
     </div>`;
   document.getElementById('win-custom').addEventListener('click', () => setPhase('PARTISI'));
   document.getElementById('win-upgrade').addEventListener('click', () => {
-    // Can't upgrade - no existing Windows
     document.getElementById('win-upgrade').style.opacity = '0.5';
     setTimeout(() => { document.getElementById('win-upgrade').style.opacity = '1'; }, 500);
   });
+  updateWinTypeFocus();
+}
+
+function updateWinTypeFocus() {
+  const up = document.getElementById('win-upgrade');
+  const cu = document.getElementById('win-custom');
+  if (!up || !cu) return;
+  up.classList.toggle('selected', winFocus === 0);
+  cu.classList.toggle('selected', winFocus === 1);
+}
+
+function handleWinSetupKey(e) {
+  const key = e.key;
+  switch (state.phase) {
+    case 'WIN_LANG':
+      if (key === 'Enter') { e.preventDefault(); setPhase('WIN_INSTALL'); }
+      break;
+    case 'WIN_INSTALL':
+      if (key === 'Enter') { e.preventDefault(); setPhase('WIN_LICENSE'); }
+      break;
+    case 'WIN_LICENSE':
+      if (key === 'Tab') {
+        e.preventDefault();
+        const cb = document.getElementById('license-accept');
+        const btn = document.getElementById('win-license-next');
+        winFocus = winFocus === 0 ? 1 : 0;
+        if (winFocus === 0) cb.focus(); else btn.focus();
+      } else if (key === ' ' && document.activeElement?.id === 'license-accept') {
+        // Let default checkbox behavior work
+      } else if (key === 'Enter') {
+        e.preventDefault();
+        const btn = document.getElementById('win-license-next');
+        if (!btn.disabled) setPhase('WIN_TYPE');
+      }
+      break;
+    case 'WIN_TYPE':
+      if (key === 'ArrowUp' || key === 'ArrowDown' || key === 'Tab') {
+        e.preventDefault();
+        winFocus = winFocus === 0 ? 1 : 0;
+        updateWinTypeFocus();
+      } else if (key === 'Enter') {
+        e.preventDefault();
+        if (winFocus === 1) setPhase('PARTISI');
+        else {
+          const up = document.getElementById('win-upgrade');
+          if (up) { up.style.opacity = '0.5'; setTimeout(() => { up.style.opacity = '1'; }, 500); }
+        }
+      }
+      break;
+  }
 }
 
 // ============================================
@@ -328,6 +385,11 @@ function handleKeyDown(e) {
       break;
     case 'BIOS2':
       e.preventDefault(); handleBiosKey(e, () => setPhase('SAVING2')); break;
+    case 'WIN_LANG':
+    case 'WIN_INSTALL':
+    case 'WIN_LICENSE':
+    case 'WIN_TYPE':
+      handleWinSetupKey(e); break;
     case 'PARTISI':
       handlePartisiKey(e, () => setPhase('HASIL')); break;
   }
