@@ -33,7 +33,7 @@ function setPhase(phase) {
     case 'START':
       showScreen('screen-start'); timerEl.style.display = 'none'; break;
     case 'POST1':
-      showScreen('screen-post'); timerEl.style.display = 'block'; renderPost1(); break;
+      showScreen('screen-post'); timerEl.style.display = 'block'; showPCStartup(() => renderPost1()); break;
     case 'BIOS1':
       showScreen('screen-bios'); state.session = 1;
       biosNav.currentTab = 0; biosNav.currentItem = 0; biosNav.currentSubMenu = null;
@@ -148,15 +148,55 @@ function renderPost2() {
 }
 
 // ============================================
-// SAVING ANIMATION
+// PC STARTUP ANIMATION
+// ============================================
+function showPCStartup(cb) {
+  const c = document.getElementById('post-content');
+  c.textContent = '';
+  c.style.color = '#aaa';
+
+  // Phase 1: Black screen (power on)
+  setTimeout(() => {
+    if (state.phase !== 'POST1') return;
+    // Phase 2: Motherboard branding
+    c.innerHTML = '\n\n\n\n\n\n\n\n\n<span style="color:#fff;font-size:1.1em">          ASUS P5KPL-AM SE</span>\n<span style="color:#888">          BIOS Version 02.58</span>\n\n<span style="color:#666">          Press DEL to run Setup</span>';
+
+    setTimeout(() => {
+      if (state.phase !== 'POST1') return;
+      // Phase 3: Quick flash to black then POST
+      c.textContent = '';
+      setTimeout(() => {
+        if (state.phase !== 'POST1') return;
+        cb();
+      }, 300);
+    }, 1500);
+  }, 800);
+}
+
+// ============================================
+// SAVING & RESTART ANIMATION
 // ============================================
 function showSavingAnimation(cb) {
   showScreen('screen-post');
   const c = document.getElementById('post-content');
-  c.innerHTML = '<div class="saving-screen">Saving configuration...</div>';
+
+  // Phase 1: Saving message
+  c.innerHTML = '\n\n Saving configuration...';
   setTimeout(() => {
-    c.innerHTML = '<div class="saving-screen">Saving configuration...\nSystem will now reset.</div>';
-    setTimeout(() => { c.innerHTML = '<div class="saving-screen">Restarting...</div>'; setTimeout(cb, 800); }, 1000);
+    c.innerHTML = '\n\n Saving configuration...\n Configuration saved.\n\n System will now restart.';
+    setTimeout(() => {
+      // Phase 2: Screen goes completely black (like a real restart)
+      c.textContent = '';
+      setTimeout(() => {
+        // Phase 3: Brief motherboard screen on restart
+        c.innerHTML = '\n\n\n\n\n\n\n\n\n<span style="color:#fff;font-size:1.1em">          ASUS P5KPL-AM SE</span>\n<span style="color:#888">          BIOS Version 02.58</span>';
+        setTimeout(() => {
+          // Phase 4: Flash to black then POST
+          c.textContent = '';
+          setTimeout(cb, 300);
+        }, 1200);
+      }, 800);
+    }, 500);
   }, 1000);
 }
 
