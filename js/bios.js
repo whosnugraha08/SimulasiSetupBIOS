@@ -23,16 +23,27 @@ function getTabItems(tabIndex) {
 }
 
 function getMainItems() {
-  // Build current time display
   const now = new Date();
-  const timeStr = state.bios1.systemTime || `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  if (!state.bios1.systemTime) {
+    state.bios1.systemTime = [now.getHours(), now.getMinutes(), now.getSeconds()];
+  }
+  if (!state.bios1.systemDate) {
+    state.bios1.systemDate = [now.getMonth() + 1, now.getDate(), now.getFullYear()];
+  }
+
+  const t = state.bios1.systemTime;
+  const d = state.bios1.systemDate;
   const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const dateStr = state.bios1.systemDate || `${days[now.getDay()]} ${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}/${now.getFullYear()}`;
+  const dayName = days[new Date(d[2], d[0]-1, d[1]).getDay()] || 'Sun';
 
   const items = [
-    { id: 'systemTime', label: 'System Time', value: `[${timeStr}]`, type: 'display',
+    { id: 'systemTime', label: 'System Time', type: 'time',
+      parts: [String(t[0]).padStart(2,'0'), String(t[1]).padStart(2,'0'), String(t[2]).padStart(2,'0')],
+      activeField: biosNav.timeField,
       help: HELP_TEXTS.systemTime },
-    { id: 'systemDate', label: 'System Date', value: `[${dateStr}]`, type: 'display',
+    { id: 'systemDate', label: 'System Date', type: 'date',
+      parts: [dayName, String(d[0]).padStart(2,'0'), String(d[1]).padStart(2,'0'), String(d[2])],
+      activeField: biosNav.dateField,
       help: HELP_TEXTS.systemDate },
     { id: 'legacyDiskette', label: 'Legacy Diskette A', value: `[${state.bios1.legacyDiskette}]`, type: 'select',
       options: ['Disabled', '360K, 5.25 in.', '1.2M, 5.25 in.', '720K, 3.5 in.', '1.44M, 3.5 in.', '2.88M, 3.5 in.'],
@@ -263,7 +274,30 @@ export function renderBios() {
     const sel = i === biosNav.currentItem ? 'selected' : '';
     const info = item.type === 'info' ? 'info-item' : '';
     const pfx = item.prefix ? `<span class="item-prefix">${item.prefix}</span>` : '';
-    const val = item.value ? `<span class="item-value">${item.value}</span>` : '';
+
+    let val = '';
+    if (item.type === 'time') {
+      // Render time with highlighted sub-field: [HH:MM:SS]
+      const isActive = i === biosNav.currentItem;
+      const p = item.parts;
+      const af = item.activeField;
+      val = '<span class="item-value">[' +
+        p.map((v, fi) => isActive && fi === af ? `<span class="field-active">${v}</span>` : v).join(':') +
+        ']</span>';
+    } else if (item.type === 'date') {
+      // Render date with highlighted sub-field: [Day MM/DD/YYYY]
+      const isActive = i === biosNav.currentItem;
+      const p = item.parts; // [dayName, MM, DD, YYYY]
+      const af = item.activeField;
+      const dayPart = p[0] + ' ';
+      const dateParts = [p[1], p[2], p[3]];
+      val = '<span class="item-value">[' + dayPart +
+        dateParts.map((v, fi) => isActive && fi === af ? `<span class="field-active">${v}</span>` : v).join('/') +
+        ']</span>';
+    } else {
+      val = item.value ? `<span class="item-value">${item.value}</span>` : '';
+    }
+
     html += `<div class="bios-item ${sel} ${info}">${pfx}<span class="item-label">${item.label}</span>${val}</div>`;
   });
   menuEl.innerHTML = html;
@@ -333,6 +367,17 @@ export function handleBiosKey(e, onSaveExit) {
     case 'ArrowDown': { const idx = selectable.indexOf(biosNav.currentItem); if (idx < selectable.length - 1) biosNav.currentItem = selectable[idx + 1]; break; }
     case 'Enter': handleEnter(items); break;
     case 'Escape': handleEscape(); break;
+    case 'Tab': {
+      // Tab cycles sub-fields for time/date items
+      e.preventDefault();
+      const curItem = items[biosNav.currentItem];
+      if (curItem?.type === 'time') {
+        biosNav.timeField = e.shiftKey ? (biosNav.timeField - 1 + 3) % 3 : (biosNav.timeField + 1) % 3;
+      } else if (curItem?.type === 'date') {
+        biosNav.dateField = e.shiftKey ? (biosNav.dateField - 1 + 3) % 3 : (biosNav.dateField + 1) % 3;
+      }
+      break;
+    }
     case 'F10': e.preventDefault(); biosNav.saveDialog = true; biosNav.saveDialogBtn = 0; break;
     case '+': case '=': handleValueChange(items, 1); break;
     case '-': handleValueChange(items, -1); break;
@@ -356,30 +401,33 @@ function handleValueChange(items, dir) {
   const item = items[biosNav.currentItem];
   if (!item) return;
 
-  // Handle System Time (+/- changes hour)
-  if (item.id === 'systemTime') {
-    const now = new Date();
-    let timeStr = state.bios1.systemTime || `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-    const parts = timeStr.split(':').map(Number);
-    parts[0] = (parts[0] + dir + 24) % 24; // cycle hours 0-23
-    state.bios1.systemTime = parts.map(p => String(p).padStart(2, '0')).join(':');
+  // Handle System Time (+/- changes selected field)
+  if (item.type === 'time') {
+    const t = state.bios1.systemTime;
+    const f = biosNav.timeField;
+    if (f === 0) t[0] = (t[0] + dir + 24) % 24;       // hour 0-23
+    else if (f === 1) t[1] = (t[1] + dir + 60) % 60;   // min 0-59
+    else if (f === 2) t[2] = (t[2] + dir + 60) % 60;   // sec 0-59
     return;
   }
 
-  // Handle System Date (+/- changes day)
-  if (item.id === 'systemDate') {
-    const now = new Date();
-    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    let dateStr = state.bios1.systemDate || `${days[now.getDay()]} ${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}/${now.getFullYear()}`;
-    const match = dateStr.match(/(\w+)\s+(\d+)\/(\d+)\/(\d+)/);
-    if (match) {
-      let m = parseInt(match[2]), d = parseInt(match[3]), y = parseInt(match[4]);
-      d += dir;
-      const maxD = new Date(y, m, 0).getDate();
-      if (d > maxD) { d = 1; m++; if (m > 12) { m = 1; y++; } }
-      if (d < 1) { m--; if (m < 1) { m = 12; y--; } d = new Date(y, m, 0).getDate(); }
-      const dayName = days[new Date(y, m - 1, d).getDay()];
-      state.bios1.systemDate = `${dayName} ${String(m).padStart(2,'0')}/${String(d).padStart(2,'0')}/${y}`;
+  // Handle System Date (+/- changes selected field)
+  if (item.type === 'date') {
+    const d = state.bios1.systemDate; // [month, day, year]
+    const f = biosNav.dateField;
+    if (f === 0) { // month 1-12
+      d[0] = ((d[0] - 1 + dir + 12) % 12) + 1;
+      const maxD = new Date(d[2], d[0], 0).getDate();
+      if (d[1] > maxD) d[1] = maxD;
+    } else if (f === 1) { // day
+      const maxD = new Date(d[2], d[0], 0).getDate();
+      d[1] = d[1] + dir;
+      if (d[1] > maxD) d[1] = 1;
+      if (d[1] < 1) d[1] = maxD;
+    } else if (f === 2) { // year
+      d[2] = Math.max(2000, Math.min(2099, d[2] + dir));
+      const maxD = new Date(d[2], d[0], 0).getDate();
+      if (d[1] > maxD) d[1] = maxD;
     }
     return;
   }

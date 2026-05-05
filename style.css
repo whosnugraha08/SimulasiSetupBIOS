@@ -72,6 +72,7 @@ body {
 .bios-item .item-prefix{margin-right:4px}
 .bios-item.info-item{color:#333}
 .bios-item.info-item .item-value{color:#333}
+.field-active{background:#000;color:#fff;padding:0 2px}
 .bios-submenu-title{padding:2px 4px 10px;color:#000;font-weight:bold;border-bottom:1px solid #888;margin-bottom:6px}
 #bios-footer{background:#00a;padding:4px 12px;color:#ff0;font-size:.85em;text-align:center;border-top:1px solid #aaa;margin:0 8px}
 

@@ -44,6 +44,8 @@ export const biosNav = {
   valuePopupIndex: 0,
   saveDialog: false,
   saveDialogBtn: 0, // 0=Ok, 1=Cancel
+  timeField: 0,  // 0=hour, 1=min, 2=sec
+  dateField: 0,  // 0=month, 1=day, 2=year
 };
 
 export const partisiNav = {
@@ -93,6 +95,8 @@ export function resetState() {
   biosNav.valuePopupIndex = 0;
   biosNav.saveDialog = false;
   biosNav.saveDialogBtn = 0;
+  biosNav.timeField = 0;
+  biosNav.dateField = 0;
 
   partisiNav.selectedRow = 0;
   partisiNav.focusArea = 'table';
