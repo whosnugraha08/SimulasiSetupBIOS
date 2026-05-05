@@ -7,6 +7,16 @@ import { renderBios, handleBiosKey } from './bios.js';
 import { renderPartisi, handlePartisiKey } from './partisi.js';
 import { renderResults, renderLeaderboard } from './scoring.js';
 
+// Avoid repeating the same soal consecutively
+let lastSoalId = null;
+function pickRandomSoal() {
+  let available = bankSoal.filter(s => s.id !== lastSoalId);
+  if (available.length === 0) available = bankSoal;
+  const picked = available[Math.floor(Math.random() * available.length)];
+  lastSoalId = picked.id;
+  state.soalPartisi = picked;
+}
+
 // ============================================
 // SCREEN MANAGEMENT
 // ============================================
@@ -165,7 +175,7 @@ function renderBootScreen() {
       p += 5;
       const bar = '█'.repeat(Math.floor(p/5)) + '░'.repeat(20-Math.floor(p/5));
       c.innerHTML = `\n\n\n\n\n\n\n\n\n\n\n\n              Windows is loading files...\n              <span class="boot-progress">[${bar}] ${p}%</span>`;
-      if (p >= 100) { clearInterval(iv); setTimeout(() => { state.soalPartisi = bankSoal[Math.floor(Math.random()*bankSoal.length)]; state.partisiDibuat = []; setPhase('WIN_LANG'); }, 500); }
+      if (p >= 100) { clearInterval(iv); setTimeout(() => { pickRandomSoal(); state.partisiDibuat = []; setPhase('WIN_LANG'); }, 500); }
     }, 120);
   };
   setTimeout(() => { if (state.phase === 'BOOT') document.addEventListener('keydown', handler); }, 300);
